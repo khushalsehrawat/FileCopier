@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Copier</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="container">
+    <h1>File Copier</h1>
+    <p class="lead">Select the files and subfolders to copy.</p>
+    <form id="copyForm">
+        <div class="mb-4">
+            <label for="sourceFolder" class="form-label">Enter Source Folder Path</label>
+            <input type="text" class="form-control" id="sourceFolder" placeholder="Enter source folder path" required>
+            <button type="button" class="btn btn-info mt-2" onclick="loadFolderContents()">Load Folder Contents</button>
+        </div>
+        <div class="mb-4">
+            <label for="destinationFolder" class="form-label">Enter Destination Folder Path</label>
+            <input type="text" class="form-control" id="destinationFolder" placeholder="Enter destination folder path" required>
+        </div>
+
+
+        <div class="form-check mb-4">
+    <input type="checkbox" class="form-check-input" id="sortByExtension">
+    <label class="form-check-label" for="sortByExtension">
+        <strong>Sort files into folders by extension</strong>
+    </label>
+</div>
+
+
+
+        <div class="form-check mb-2">
+            <input type="checkbox" class="form-check-input" id="selectAllCheckbox" onchange="toggleSelectAll(this)">
+            <label class="form-check-label" for="selectAllCheckbox"><strong>Select All Files</strong></label>
+        </div>
+        <div id="folderContents" class="mb-4"></div>
+        <button type="submit" class="btn btn-primary">Start Copying</button>
+    </form>
+    <div id="statusMessage" class="mt-4"></div>
+</div>
+
+
+
+<script>
+    async function loadFolderContents() {
+        const sourceFolder = document.getElementById('sourceFolder').value;
+        if (!sourceFolder) {
+            alert('Please enter a source folder path.');
+            return;
+        }
+        const response = await fetch('/get_folder_contents', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ folderPath: sourceFolder })
+        });
+        const data = await response.json();
+        const folderContents = document.getElementById('folderContents');
+        if (data.status === 'success') {
+            folderContents.innerHTML = '';
+            data.files.forEach(file => {
+                const div = document.createElement('div');
+                div.classList.add('form-check');
+                div.innerHTML = `
+                    <input type="checkbox" class="form-check-input" id="file_${file}" value="${file}">
+                    <label class="form-check-label" for="file_${file}">${file}</label>
+                `;
+                folderContents.appendChild(div);
+            });
+        } else {
+            folderContents.innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
+        }
+    }
+
+    function toggleSelectAll(checkbox) {
+        const checkboxes = document.querySelectorAll('#folderContents input[type="checkbox"]');
+        checkboxes.forEach(cb => cb.checked = checkbox.checked);
+    }
+
+    document.getElementById('copyForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const sourceFolder = document.getElementById('sourceFolder').value;
+    const destinationFolder = document.getElementById('destinationFolder').value;
+    const sortByExtension = document.getElementById('sortByExtension').checked;
+
+    const selectedFiles = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
+        .map(cb => cb.value);
+
+    if (selectedFiles.length === 0) {
+        alert('Please select files or folders to copy.');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('sourceFolder', sourceFolder);
+    formData.append('destinationFolder', destinationFolder);
+    formData.append('sortByExtension', sortByExtension);
+    selectedFiles.forEach(file => formData.append('selectedFiles', file));
+
+    const response = await fetch('/copy_files', {
+        method: 'POST',
+        body: formData
+    });
+
+    const result = await response.json();
+    const statusMessage = document.getElementById('statusMessage');
+    statusMessage.textContent = result.message;
+    statusMessage.classList.remove('text-success', 'text-danger', 'show');
+    statusMessage.classList.add(result.status === 'success' ? 'text-success' : 'text-danger');
+    statusMessage.classList.add('show');
+    statusMessage.style.opacity = 1;
+
+    setTimeout(() => {
+        statusMessage.style.opacity = 0;
+    }, 3000);
+    });
+</script>
+</body>
+</html>
+
+
