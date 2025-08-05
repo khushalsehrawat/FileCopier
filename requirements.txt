@@ -19,7 +19,7 @@ Cython==3.0.12
 decorator==4.4.2
 easydict==1.13
 filelock==3.18.0
-Flask==3.1.1
+Flask==3.0.0
 
 gunicorn==21.2.0
 
@@ -109,4 +109,5 @@ uv==0.6.17
 wcwidth==0.2.13
 websocket-client==1.8.0
 Werkzeug==3.1.3
+
 
