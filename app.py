@@ -69,5 +69,32 @@ def copy_files():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
 
+
+@app.route('/copy', methods=['POST'])
+def copy_files():
+    destination_path = request.form['destination']
+    auto_folder = request.form.get('auto_folder') == 'on'
+    uploaded_files = request.files.getlist('source_folder')
+
+    if not os.path.exists(destination_path):
+        os.makedirs(destination_path)
+
+    for file in uploaded_files:
+        filename = secure_filename(file.filename)
+        if not filename:
+            continue
+        if auto_folder:
+            ext = os.path.splitext(filename)[1][1:].lower()
+            ext_folder = os.path.join(destination_path, ext)
+            os.makedirs(ext_folder, exist_ok=True)
+            file.save(os.path.join(ext_folder, os.path.basename(filename)))
+        else:
+            file.save(os.path.join(destination_path, os.path.basename(filename)))
+
+    return '✅ Files copied successfully!'
+
+
+
 if __name__ == '__main__':
     app.run(debug=True)
+
